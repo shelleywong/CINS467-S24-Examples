@@ -1,0 +1,17 @@
+stages:
+  - deploy 
+
+pages:
+  image: ghcr.io/cirruslabs/flutter:3.16.9
+  stage: deploy
+  before_script:
+    - cd mw_app
+    - flutter packages get
+  script:
+    - flutter build web --release
+    - cp -r build/web ../public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == "web"
