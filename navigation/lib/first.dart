@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'second.dart';
+import 'package:go_router/go_router.dart';
+//import 'second.dart';
 import 'drawer.dart';
 class FirstRoute extends StatelessWidget {
   const FirstRoute({super.key});
@@ -16,10 +17,7 @@ class FirstRoute extends StatelessWidget {
           child: const Text('Open route'),
           onPressed: () {
             // Navigate to second route when tapped.
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SecondRoute()),
-            );
+            context.go('/page2');
           },
         ),
       ),

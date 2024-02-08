@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'second.dart';
+import 'package:go_router/go_router.dart';
+//import 'second.dart';
 
 Widget getDrawer(BuildContext context){
   return Drawer(
@@ -13,19 +14,17 @@ Widget getDrawer(BuildContext context){
               child: Text('Drawer Header'),
             ),
             ListTile(
+              leading: const Icon(Icons.arrow_forward),
               title: const Text('Second Route'),
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SecondRoute()),
-                );
+                context.go('/page2');
               },
             ),
             ListTile(
               leading: const Icon(Icons.arrow_back),
-              title: const Text('Go back'),
+              title: const Text('First Route'),
               onTap: () {
-                Navigator.pop(context);
+                context.go('/');
               },
             ),
           ],

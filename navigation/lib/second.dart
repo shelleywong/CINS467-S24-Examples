@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'drawer.dart';
 
 class SecondRoute extends StatelessWidget {
@@ -15,7 +16,7 @@ class SecondRoute extends StatelessWidget {
         child: ElevatedButton(
           onPressed: () {
             // Navigate back to first route when tapped.
-            Navigator.pop(context);
+            context.go('/');
           },
           child: const Text('Go back!'),
         ),
