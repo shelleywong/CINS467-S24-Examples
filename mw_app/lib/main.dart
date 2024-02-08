@@ -95,7 +95,8 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         // Center is a layout widget. It takes a single child and positions it
         // in the middle of the parent.
-        child: Column(
+        child: ListView(
+          padding: const EdgeInsets.all(8),
           // Column is also a layout widget. It takes a list of children and
           // arranges them vertically. By default, it sizes itself to fit its
           // children horizontally, and tries to be as tall as its parent.
@@ -109,33 +110,61 @@ class _MyHomePageState extends State<MyHomePage> {
           // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
           // action in the IDE, or press "p" in the console), to see the
           // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            Container(
+              constraints: const BoxConstraints(maxHeight: 300),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(40.0),
+                child: const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Image(
+                    image: AssetImage('assets/chicostateflowers.jpeg'),
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              constraints: const BoxConstraints(
+                maxHeight: 300,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(40.0),
+                child: const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Image(
+                    image: AssetImage('assets/chicostateafterrain.jpg'),
+                  ),
+                ),
+              ),
+            ),
             const Text(
               'You have pushed the button this many times:',
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Tooltip(
-                  message: "Increment Counter",
-                  child: IconButton(
-                    onPressed: _incrementCounter,
-                    icon: const Icon(Icons.add),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Tooltip(
+                    message: "Increment Counter",
+                    child: IconButton(
+                      onPressed: _incrementCounter,
+                      icon: const Icon(Icons.add),
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    '$_counter',
-                    style: Theme.of(context).textTheme.headlineMedium,
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      '$_counter',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
                   ),
-                ),
-                ElevatedButton(
-                  onPressed: _decrementCounter,
-                  child: const Text('Decrement'),
-                )
-              ],
+                  ElevatedButton(
+                    onPressed: _decrementCounter,
+                    child: const Text('Decrement'),
+                  )
+                ],
+              ),
             ),
           ],
         ),
