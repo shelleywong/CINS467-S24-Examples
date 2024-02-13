@@ -32,8 +32,9 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final _formKey = GlobalKey<FormState>();
   final _myController = TextEditingController();
-  String _inputText = '';
+  String? _inputText = '';
 
   void _printLatestValue(){
     if (kDebugMode) {
@@ -41,10 +42,49 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _submitText(){
+  // void _submitText(){
+  //   setState((){
+  //     _inputText = _myController.text;
+  //   });
+  // }
+
+  void _saveText(String? value){
     setState((){
-      _inputText = _myController.text;
+      _inputText = value;
     });
+  }
+
+  void _submitForm() {
+    if(_formKey.currentState!.validate()){
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Processing data...'),
+          action: SnackBarAction(
+            label: 'Finish',
+            onPressed:() {
+              _formKey.currentState!.save();
+              _myController.clear();
+            },
+          )
+        )
+      );
+      // if (kDebugMode) {
+      //   print('TextFormField input: ${_myController.text}');
+      // }
+    }
+  }
+
+  String? _textValidator(String? value){
+    if(value == null || value.isEmpty){
+      return 'Please enter some text; field cannot be empty';
+    }
+    if(value.contains('@')){
+      return 'Do not use the @ char.';
+    }
+    if(value.length < 2){
+      return 'Must use at least 2 chars';
+    }
+    return null;
   }
 
   @override
@@ -70,29 +110,56 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            TextField(
-              controller: _myController,
-              obscureText: false,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Enter a search term',
-                hintText: 'Search...',
-              ),
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _myController,
+                    decoration: const InputDecoration(
+                      icon: Icon(Icons.person),
+                      hintText: 'What do people call you?',
+                      labelText: 'Name *',
+                    ),
+                    onSaved: _saveText,
+                    validator: _textValidator,
+                  ),
+                  ElevatedButton(
+                    onPressed: _submitForm,
+                    child: const Text('Submit'),
+                  )
+                ],
+              )
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
-                _inputText,
+                _inputText ?? '<nothing input>',
               ),
             ),
+            // TextField(
+            //   controller: _myController,
+            //   obscureText: false,
+            //   decoration: const InputDecoration(
+            //     border: OutlineInputBorder(),
+            //     labelText: 'Enter a search term',
+            //     hintText: 'Search...',
+            //   ),
+            // ),
+            // Padding(
+            //   padding: const EdgeInsets.all(8.0),
+            //   child: Text(
+            //     _inputText,
+            //   ),
+            // ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _submitText,
-        tooltip: 'Submit Text',
-        child: const Icon(Icons.edit),
-      ),
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: _submitText,
+      //   tooltip: 'Submit Text',
+      //   child: const Icon(Icons.edit),
+      // ),
     );
   }
 }
