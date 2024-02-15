@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
@@ -55,22 +58,34 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  final Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
+  late Future<int> _counter;
 
-  void _incrementCounter() {
+  Future<void> _incrementCounter() async {
+    final SharedPreferences prefs = await _prefs;
+    final int counter = (prefs.getInt('counter') ?? 0) + 1;
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _counter = prefs.setInt('counter', counter).then((bool success){
+        return counter;
+      });
     });
   }
 
-  void _decrementCounter() {
-    setState((){
-      _counter--;
+  Future<void> _decrementCounter() async {
+    final SharedPreferences prefs = await _prefs;
+    final int counter = (prefs.getInt('counter') ?? 0) - 1;
+    setState(() {
+      _counter = prefs.setInt('counter', counter).then((bool success){
+        return counter;
+      });
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _counter = _prefs.then((SharedPreferences prefs){
+      return prefs.getInt('counter') ?? 0;
     });
   }
 
@@ -115,26 +130,9 @@ class _MyHomePageState extends State<MyHomePage> {
               constraints: const BoxConstraints(maxHeight: 300),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(40.0),
-                child: const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Image(
+                child: const Image(
                     image: AssetImage('assets/chicostateflowers.jpeg'),
                   ),
-                ),
-              ),
-            ),
-            Container(
-              constraints: const BoxConstraints(
-                maxHeight: 300,
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(40.0),
-                child: const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Image(
-                    image: AssetImage('assets/chicostateafterrain.jpg'),
-                  ),
-                ),
               ),
             ),
             const Text(
@@ -152,11 +150,31 @@ class _MyHomePageState extends State<MyHomePage> {
                       icon: const Icon(Icons.add),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      '$_counter',
-                      style: Theme.of(context).textTheme.headlineMedium,
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: FutureBuilder<int>(
+                        future: _counter,
+                        builder: ((context, snapshot) {
+                          switch(snapshot.connectionState){
+                            case ConnectionState.waiting:
+                              return const CircularProgressIndicator();
+                            default:
+                              if(snapshot.hasError){
+                                return Text('Error: ${snapshot.error}');
+                              } else {
+                                return Text(
+                                  'Count: ${snapshot.data}',
+                                  style: Theme.of(context).textTheme.headlineMedium,
+                                );
+                              }
+                          }
+                        }),
+                      ),
+                      // child: Text(
+                      //   '$_counter',
+                      //   style: Theme.of(context).textTheme.headlineMedium,
+                      // ),
                     ),
                   ),
                   ElevatedButton(
@@ -164,6 +182,17 @@ class _MyHomePageState extends State<MyHomePage> {
                     child: const Text('Decrement'),
                   )
                 ],
+              ),
+            ),
+            Container(
+              constraints: const BoxConstraints(
+                maxHeight: 300,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(40.0),
+                child: const Image(
+                    image: AssetImage('assets/chicostateafterrain.jpg'),
+                  ),
               ),
             ),
           ],
