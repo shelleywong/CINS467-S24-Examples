@@ -5,10 +5,10 @@ pages:
   image: ghcr.io/cirruslabs/flutter:3.16.9
   stage: deploy
   before_script:
-    - cd mw_app
+    - cd recipe_app
     - flutter packages get
   script:
-    - flutter build web --release
+    - flutter build web --release --web-renderer html
     - cp -r build/web ../public
   artifacts:
     paths:
