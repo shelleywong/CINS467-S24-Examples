@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 //import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
 
 import 'firebase_options.dart';
 //import 'storage.dart';
@@ -67,6 +69,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  late Future<Position> _position;
   //final Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
   //late Future<int> _counter;
 
@@ -74,6 +77,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
   final CounterStorage _storage = CounterStorage(); // sqflite
   int _counter = 0;
+
+  final LocationSettings locationSettings = const LocationSettings(
+    accuracy: LocationAccuracy.high,
+    distanceFilter: 100,
+  );
+  late StreamSubscription<Position> positionStream;
 
   Future<void> _incrementCounter() async {
     // final SharedPreferences prefs = await _prefs;
@@ -86,7 +95,7 @@ class _MyHomePageState extends State<MyHomePage> {
     await _storage.readCounter().then((value) async {
       final int counter = value + 1;
       await _storage.writeCounter(counter);
-      setState((){
+      setState(() {
         _counter = counter;
       });
     });
@@ -103,10 +112,52 @@ class _MyHomePageState extends State<MyHomePage> {
     await _storage.readCounter().then((value) async {
       final int counter = value - 1;
       await _storage.writeCounter(counter);
-      setState((){
+      setState(() {
         _counter = counter;
       });
     });
+  }
+
+  // Determine the current position of the device.
+  ///
+  /// When the location services are not enabled or permissions
+  /// are denied the `Future` will return an error.
+  /// Ref: https://pub.dev/packages/geolocator
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Test if location services are enabled.
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // Location services are not enabled don't continue
+      // accessing the position and request users of the
+      // App to enable the location services.
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        // Permissions are denied, next time you could try
+        // requesting permissions again (this is also where
+        // Android's shouldShowRequestPermissionRationale
+        // returned true. According to Android guidelines
+        // your App should show an explanatory UI now.
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      // Permissions are denied forever, handle appropriately.
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    // When we reach here, permissions are granted and we can
+    // continue accessing the position of the device.
+    return await Geolocator.getCurrentPosition();
   }
 
   @override
@@ -116,15 +167,24 @@ class _MyHomePageState extends State<MyHomePage> {
     //   return prefs.getInt('counter') ?? 0;
     // });
     _storage.readCounter().then((value) {
-      setState((){
+      setState(() {
         _counter = value;
       });
     });
+    _position = _determinePosition();
+    positionStream = Geolocator.getPositionStream(
+      locationSettings: locationSettings).listen((Position? pos){
+        // Handle position changes
+        if(kDebugMode){
+          print(pos == null ? 'Unknown' : '${pos.latitude.toString()}, ${pos.longitude.toString()}');
+        }
+      });
   }
 
   @override
   void dispose() {
     //_storage.close();  // sqflite example (close DB)
+    positionStream.cancel();
     super.dispose();
   }
 
@@ -165,13 +225,28 @@ class _MyHomePageState extends State<MyHomePage> {
           // action in the IDE, or press "p" in the console), to see the
           // wireframe for each widget.
           children: <Widget>[
+            FutureBuilder(
+              future: _position,
+              builder:(context, snapshot) {
+                switch(snapshot.connectionState){
+                  case ConnectionState.waiting:
+                    return const CircularProgressIndicator();
+                  default:
+                    if(snapshot.hasError){
+                      return Text('${snapshot.error}');
+                    } else {
+                      return Text('${snapshot.data}');
+                    }
+                }
+              },
+            ),
             Container(
               constraints: const BoxConstraints(maxHeight: 300),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(40.0),
                 child: const Image(
-                    image: AssetImage('assets/chicostateflowers.jpeg'),
-                  ),
+                  image: AssetImage('assets/chicostateflowers.jpeg'),
+                ),
               ),
             ),
             const Text(
@@ -211,8 +286,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       //   }),
                       // ),
                       child: Text(
-                        _counter == 0 ? '' :
-                        'Count: $_counter',
+                        _counter == 0 ? '' : 'Count: $_counter',
                         style: Theme.of(context).textTheme.headlineMedium,
                       ),
                     ),
@@ -231,31 +305,32 @@ class _MyHomePageState extends State<MyHomePage> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(40.0),
                 child: const Image(
-                    image: AssetImage('assets/chicostateafterrain.jpg'),
-                  ),
+                  image: AssetImage('assets/chicostateafterrain.jpg'),
+                ),
               ),
             ),
             StreamBuilder(
-              stream: FirebaseFirestore.instance.collection('greetings').snapshots(),
-              builder:(context, snapshot) {
-                switch(snapshot.connectionState){
+              stream: FirebaseFirestore.instance
+                  .collection('greetings')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                switch (snapshot.connectionState) {
                   case ConnectionState.waiting:
                     return const CircularProgressIndicator();
                   default:
-                    if(snapshot.hasError){
+                    if (snapshot.hasError) {
                       return Text('Error: ${snapshot.error}');
                     } else {
                       return ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: snapshot.data!.docs.length,
-                        itemBuilder: (context, index){
-                          return Text(
-                            '${snapshot.data!.docs[index]["message"]}',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.displaySmall,
-                          );
-                        }
-                      );
+                          shrinkWrap: true,
+                          itemCount: snapshot.data!.docs.length,
+                          itemBuilder: (context, index) {
+                            return Text(
+                              '${snapshot.data!.docs[index]["message"]}',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.displaySmall,
+                            );
+                          });
                     }
                 }
               },
