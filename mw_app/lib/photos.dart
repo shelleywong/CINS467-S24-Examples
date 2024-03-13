@@ -3,6 +3,23 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 
+class SizeConfig {
+  static MediaQueryData? _mediaQueryData;
+  static double? screenWidth;
+  static double? screenHeight;
+  static double? blockSizeHorizontal;
+  static double? blockSizeVertical;
+
+  void init(BuildContext context) {
+    _mediaQueryData = MediaQuery.of(context);
+    screenWidth = _mediaQueryData!.size.width;
+    screenHeight = _mediaQueryData!.size.height;
+    blockSizeHorizontal = screenWidth! / 100;
+    blockSizeVertical = screenHeight! / 100;
+  }
+}
+
+
 class Photos extends StatelessWidget {
   const Photos({super.key});
 
@@ -30,9 +47,10 @@ class MyPhotoPage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyPhotoPage> {
-
+  final myScrollController = ScrollController();
   @override
   Widget build(BuildContext context) {
+    SizeConfig().init(context);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -73,8 +91,10 @@ class _MyHomePageState extends State<MyPhotoPage> {
               } else {
                 return Expanded(
                   child: Scrollbar(
+                    controller: myScrollController,
                     child: ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
+                      controller: myScrollController,
                       itemCount: snapshot.data!.docs.length,
                       itemBuilder: (context, index){
                         return photoWidget(snapshot, index);
@@ -96,8 +116,23 @@ class _MyHomePageState extends State<MyPhotoPage> {
           ListTile(
             leading: const Icon(Icons.person),
             title: Text(snapshot.data!.docs[index]['title']),
+            subtitle: Text(DateTime.fromMillisecondsSinceEpoch(snapshot.data!.docs[index]['timestamp'].seconds * 1000).toString()),
+            //subtitle: Text(snapshot.data!.docs[index]['timestamp'].toString()),
           ),
-          Image.network(snapshot.data!.docs[index]['downloadURL']),
+          //Image.network(snapshot.data!.docs[index]['downloadURL']),
+          kIsWeb
+              ? Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Image.network(
+                  snapshot.data!.docs[index]['downloadURL'],
+                  height: SizeConfig.blockSizeVertical! * 70,
+                )
+              )
+              : Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Image.network(snapshot.data!.docs[index]['downloadURL']),
+              ),
+
         ],
       );
     } catch(e){

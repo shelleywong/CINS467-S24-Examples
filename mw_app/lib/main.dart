@@ -12,7 +12,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
-
 import 'firebase_options.dart';
 //import 'storage.dart';
 //import 'sqlstorage.dart';
@@ -46,7 +45,6 @@ final _router = GoRouter(
   ],
 );
 
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -76,6 +74,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   late Future<Position> _position;
+  Position? _photoPosition;
 
   final CounterStorage _storage = CounterStorage(); // sqflite
   int _counter = 0;
@@ -86,31 +85,34 @@ class _MyHomePageState extends State<MyHomePage> {
   );
   late StreamSubscription<Position> positionStream;
 
-  File? _image;
-  String? _imagePath;
+  File? _image; // for android
+  String? _imagePath; // for web
+  Uint8List? _imageForWeb; // for web
 
   Future<void> _getImage() async {
     final ImagePicker picker = ImagePicker();
     // Capture photo
     final XFile? photo = await picker.pickImage(source: ImageSource.camera);
+    _imageForWeb = await photo!.readAsBytes();
     setState(() {
-      if (photo != null) {
-        if (kIsWeb) {
-          _imagePath = photo.path;
-        } else {
-          // Android
-          _image = File(photo.path);
-        }
+      //if (photo != null) {
+      if (kIsWeb) {
+        _imagePath = photo.path;
       } else {
-        if (kDebugMode) {
-          print('No photo captured');
-        }
+        // Android
+        _image = File(photo.path);
       }
+      // } else {
+      //   if (kDebugMode) {
+      //     print('No photo captured');
+      //   }
+      // }
     });
   }
 
   Future<void> _upload() async {
-    if(_image != null){
+    if (_image != null || _imagePath != null) {
+      _photoPosition = await _determinePosition();
       // Generate a v4 (random) id (universally unique identifier)
       const uuid = Uuid();
       final String uid = uuid.v4();
@@ -119,33 +121,54 @@ class _MyHomePageState extends State<MyHomePage> {
       // Add downloadURL (ref to the image) to the database
       await _addItem(downloadURL, uid);
       // Navigate back to the photos screen
-      if(mounted){
+      if (mounted) {
         context.go('/photos');
       }
     }
   }
 
   Future<String> _uploadFile(String filename) async {
-    // Create a reference to file location in Google Cloud Storage object
-    Reference ref = FirebaseStorage.instance.ref().child('$filename.jpg');
-    // Add metadata to the image file
-    final metadata = SettableMetadata(
-      contentType: 'image/jpeg',
-      contentLanguage: 'en',
-    );
-    // Upload the file to Storage
-    final UploadTask uploadTask = ref.putFile(_image!, metadata);
-    TaskSnapshot uploadResult = await uploadTask;
-    // After the upload task is complete, get a (String) download URL
-    final String downloadURL = await uploadResult.ref.getDownloadURL();
-    // Return the download URL (to be used in the database entry)
-    return downloadURL;
+    if (kIsWeb) {
+      final storageRef = FirebaseStorage.instance.ref();
+      try {
+        // upload raw data
+        TaskSnapshot uploadTask =
+            await storageRef.child('$filename.jpg').putData(
+                _imageForWeb!,
+                SettableMetadata(
+                  contentType: 'image/jpeg',
+                  contentLanguage: 'en',
+                ));
+        final String downloadURL = await uploadTask.ref.getDownloadURL();
+        return downloadURL;
+      } on FirebaseException catch (e) {
+        return 'uploadFile on web error: $e';
+      }
+    } else {
+      // Android
+      // Create a reference to file location in Google Cloud Storage object
+      Reference ref = FirebaseStorage.instance.ref().child('$filename.jpg');
+      // Add metadata to the image file
+      final metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        contentLanguage: 'en',
+      );
+      // Upload the file to Storage
+      final UploadTask uploadTask = ref.putFile(_image!, metadata);
+      TaskSnapshot uploadResult = await uploadTask;
+      // After the upload task is complete, get a (String) download URL
+      final String downloadURL = await uploadResult.ref.getDownloadURL();
+      // Return the download URL (to be used in the database entry)
+      return downloadURL;
+    }
   }
 
   Future<void> _addItem(String downloadURL, String id) async {
-    await FirebaseFirestore.instance.collection('photos').add(<String, dynamic> {
+    await FirebaseFirestore.instance.collection('photos').add(<String, dynamic>{
       'downloadURL': downloadURL,
       'title': id,
+      'geopoint': GeoPoint(_photoPosition!.latitude, _photoPosition!.longitude),
+      'timestamp': DateTime.now(),
     });
   }
 
@@ -264,8 +287,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 ? const SizedBox.shrink()
                 : Image.file(_image!, height: 300),
             _imagePath == null
-              ? const SizedBox.shrink()
-              : Image.network(_imagePath!, height: 400),
+                ? const SizedBox.shrink()
+                : Image.network(_imagePath!, height: 400),
             Tooltip(
               message: kIsWeb ? 'open the gallery' : 'launch the camera',
               child: ElevatedButton(
