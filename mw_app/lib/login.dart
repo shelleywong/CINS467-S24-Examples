@@ -1,51 +1,44 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
-class CreateUser extends StatefulWidget {
-  const CreateUser({super.key, required this.title});
+class Login extends StatefulWidget {
+  const Login({super.key, required this.title});
 
   final String title;
 
   @override
-  State<CreateUser> createState() => _CreateUserState();
+  State<Login> createState() => _LoginState();
 }
 
-class _CreateUserState extends State<CreateUser> {
+class _LoginState extends State<Login> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   late String _exception = '';
 
-  Future<void> _createAccount() async {
+  Future<void> _login() async {
     if(_formKey.currentState!.validate()){
       try {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _emailController.text,
           password: _passwordController.text,
-        ).then((firebaseUser){
-          if(kDebugMode){
-            print('User: ${firebaseUser.user!.email} created successfully');
-          }
-        });
+        );
         if(mounted){
           context.go('/');
         }
       } on FirebaseAuthException catch(e){
         String ex = 'Firebase Authentication Exception: ';
-        if(e.code == 'email-already-in-use'){
-          ex += ' the account already exists for that email';
-        } else if(e.code == 'weak-password'){
-          ex += 'the password provided is too weak';
+        if(e.code == 'invalid-email'){
+          ex += 'invalid email address';
         } else {
-          ex += 'make sure you are using a valid email';
+          ex += 'check your credentials and try signing in again';
         }
         setState((){
           _exception = ex;
         });
       }
-      
+
     }
   }
 
@@ -88,32 +81,14 @@ class _CreateUserState extends State<CreateUser> {
                     ),
                     validator: (value) {
                       if(value == null || value.isEmpty){
-                        return 'Please enter a password';
-                      }
-                      return null;
-                    }
-                  ),
-                  TextFormField(
-                    obscureText: true,
-                    enableSuggestions: false,
-                    autocorrect: false,
-                    decoration: const InputDecoration(
-                      labelText: 'Confirm Password *',
-                      icon: Icon(Icons.password),
-                    ),
-                    validator: (value) {
-                      if(value == null || value.isEmpty){
-                        return 'Please re-enter your password to confirm';
-                      }
-                      if(value != _passwordController.text){
-                        return 'Passwords do not match. Please try again';
+                        return 'Please enter your password';
                       }
                       return null;
                     }
                   ),
                   ElevatedButton(
-                    onPressed: _createAccount,
-                    child: const Text('Create an Account'),
+                    onPressed: _login,
+                    child: const Text('Login'),
                   )
                 ]
               )

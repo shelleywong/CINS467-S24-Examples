@@ -21,6 +21,7 @@ import 'photos.dart';
 import 'home.dart';
 import 'createuser.dart';
 import 'profile.dart';
+import 'login.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,6 +56,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/createuser',
       builder: (context, state) => const CreateUser(title: 'Create Account'),
+    ),
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const Login(title: 'Login'),
     ),
     GoRoute(
       path: '/profile',
