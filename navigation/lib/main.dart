@@ -4,7 +4,7 @@ import 'first.dart';
 import 'second.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 // GoRouter configuration
